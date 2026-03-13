@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 
@@ -27,14 +28,22 @@ type snapshotData struct {
 }
 
 func main() {
-	dbPath := flag.String("db", "db/geth/chaindata", "Path to chaindata directory (default: db/geth/chaindata)")
+	basePath := flag.String("db", "", "Base path to geth data dir (chaindata is appended automatically); e.g. /data/ethereum/geth or ../geth")
 	flag.Parse()
+
+	if *basePath == "" {
+		fmt.Fprintln(os.Stderr, "Error: -db is required. Example: -db /data/ethereum/geth")
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	dbPath := filepath.Join(*basePath, "chaindata")
 
 	needWrite := len(flag.Args()) > 0 && (flag.Arg(0) == "sethead" ||
 		(flag.Arg(0) == "signers" && len(flag.Args()) >= 2 &&
 			(flag.Arg(1) == "set" || flag.Arg(1) == "add" || flag.Arg(1) == "remove")))
 	readonly := !needWrite
-	db, err := rawdb.NewLevelDBDatabase(*dbPath, 0, 0, "", readonly)
+	db, err := rawdb.NewLevelDBDatabase(dbPath, 0, 0, "", readonly)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Open DB: %v\n", err)
 		os.Exit(1)
